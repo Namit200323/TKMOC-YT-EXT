@@ -1,0 +1,180 @@
+/* TMKOC Arc Navigator Overlay Styling */
+
+.tmkoc-nav-container {
+  margin: 12px 0 16px 0;
+  padding: 12px 16px;
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: "Roboto", "Arial", sans-serif;
+  color: #f1f1f1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: tmkocFadeIn 0.25s ease-out;
+}
+
+@keyframes tmkocFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header line: Arc badge + episode tracker + dropdown toggle */
+.tmkoc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tmkoc-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tmkoc-brand-tag {
+  background: linear-gradient(135deg, #ff8c00, #ff0055);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.tmkoc-arc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.tmkoc-ep-progress {
+  font-size: 12px;
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+/* Controls row: Prev / Next / Episode Drawer Toggle */
+.tmkoc-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tmkoc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tmkoc-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.tmkoc-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.tmkoc-btn:disabled,
+.tmkoc-btn.tmkoc-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tmkoc-btn-primary {
+  background: #ff5500;
+  color: #fff;
+}
+
+.tmkoc-btn-primary:hover:not(:disabled) {
+  background: #ff7020;
+}
+
+.tmkoc-btn-drawer {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: auto;
+}
+
+.tmkoc-btn-drawer:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Drawer list: all episodes in the current arc */
+.tmkoc-drawer {
+  max-height: 220px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tmkoc-drawer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tmkoc-drawer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tmkoc-drawer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.tmkoc-ep-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #ccc;
+  font-size: 12px;
+  transition: background 0.1s ease;
+}
+
+.tmkoc-ep-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.tmkoc-ep-item.tmkoc-active {
+  background: rgba(255, 85, 0, 0.2);
+  border-left: 3px solid #ff5500;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tmkoc-ep-num {
+  font-weight: 700;
+  color: #ff8c00;
+  min-width: 50px;
+}
+
+.tmkoc-ep-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}

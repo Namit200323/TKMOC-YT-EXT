@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "TMKOC Arc Navigator",
+  "version": "1.0.0",
+  "description": "Sequential episode & story arc navigation bar for Taarak Mehta Ka Ooltah Chashmah on YouTube.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["data/arcs.json"],
+      "matches": ["*://*.youtube.com/*"]
+    }
+  ]
+}
