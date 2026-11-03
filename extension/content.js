@@ -11,40 +11,16 @@
   let isDrawerOpen = false;
 
   // ──────────────────────────────────────────────────────────
-  // Data Loader: Cache in chrome.storage.local with bundled fallback
+  // Data Loader: Load bundled data/arcs.json
   // ──────────────────────────────────────────────────────────
 
   async function loadArcData() {
     if (arcData) return arcData;
 
     try {
-      // 1. Try local storage cache
-      const cached = await chrome.storage.local.get(["tmkoc_arcs_data", "tmkoc_cached_at"]);
-      const now = Date.now();
-      const oneDay = 24 * 60 * 60 * 1000;
-
-      if (cached.tmkoc_arcs_data && cached.tmkoc_cached_at && now - cached.tmkoc_cached_at < oneDay) {
-        arcData = cached.tmkoc_arcs_data;
-        return arcData;
-      }
-    } catch (e) {
-      console.warn("[TMKOC Ext] Storage access failed, loading bundled file:", e);
-    }
-
-    // 2. Fallback to bundled data/arcs.json
-    try {
       const url = chrome.runtime.getURL("data/arcs.json");
       const res = await fetch(url);
       arcData = await res.json();
-
-      try {
-        await chrome.storage.local.set({
-          tmkoc_arcs_data: arcData,
-          tmkoc_cached_at: Date.now()
-        });
-      } catch (err) {
-        // storage quota or permission issue
-      }
       return arcData;
     } catch (err) {
       console.error("[TMKOC Ext] Failed to load arcs data:", err);
