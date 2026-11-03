@@ -61,7 +61,7 @@ ARC_SIGNAL_KEYWORDS: list[str] = [
 
 @dataclass
 class EpisodeNode:
-    video_id:         str
+    video_id:         Optional[str]
     episode_number:   int
     season_number:    Optional[int]
     series_tag:       str
@@ -71,6 +71,7 @@ class EpisodeNode:
     duration_seconds: int
     view_count:       int
     published_at:     str
+    is_placeholder:   bool = False
     prev_video_id:    Optional[str] = None
     next_video_id:    Optional[str] = None
 
@@ -104,55 +105,100 @@ def cluster_with_ground_truth(
     """
     storylines_sorted = sorted(storylines, key=lambda x: (x.get("startEp", 0), x.get("endEp", 0)))
 
-    # Map each episode number to its ground-truth storyline
+    # Map each episode number uniquely to its first assigned storyline (prevents boundary overlap)
     ep_to_storyline = {}
+    st_ep_map = {}  # storyline_id -> list of ep_nums
     for st in storylines_sorted:
+        st_id = st.get("id")
         s = st.get("startEp", 0)
         e = st.get("endEp", 0)
+        st_ep_map[st_id] = []
         for num in range(s, e + 1):
             if num not in ep_to_storyline:
-                ep_to_storyline[num] = st
+                ep_to_storyline[num] = st_id
+                st_ep_map[st_id].append(num)
 
-    # Group canonical episodes by storyline
-    storyline_buckets: dict[str, list[EpisodeNode]] = {}
-    storyline_meta: dict[str, dict] = {}
+    # Index canonical episodes by episode number
+    ep_by_num = {ep.episode_number: ep for ep in episodes}
+    matched_ep_nums = set()
     fallback_episodes: list[EpisodeNode] = []
-
-    for ep in episodes:
-        st = ep_to_storyline.get(ep.episode_number)
-        if st:
-            st_id = st.get("id") or f"arc_gt_{st.get('startEp')}"
-            if st_id not in storyline_buckets:
-                storyline_buckets[st_id] = []
-                storyline_meta[st_id] = st
-            storyline_buckets[st_id].append(ep)
-        else:
-            fallback_episodes.append(ep)
 
     arcs: list[Arc] = []
     arc_counter = 1
 
-    # Preserve chronological order of ground-truth storylines
+    # For each storyline, check if we have any episodes uploaded
     for st in storylines_sorted:
         st_id = st.get("id")
-        if st_id in storyline_buckets:
-            eps_in_arc = sorted(storyline_buckets[st_id], key=lambda x: x.episode_number)
-            expected_total = st.get("totalEpisodes", len(eps_in_arc))
-            is_incomplete = len(eps_in_arc) < expected_total
+        assigned_nums = st_ep_map.get(st_id, [])
+        if not assigned_nums:
+            continue
 
-            arc = Arc(
-                arc_id=f"arc_{arc_counter:03d}",
-                arc_title=st.get("title", f"Ep {st.get('startEp')}–{st.get('endEp')}"),
-                category=st.get("category", "General"),
-                tagline=st.get("tagline", ""),
-                start_episode=st.get("startEp", eps_in_arc[0].episode_number),
-                end_episode=st.get("endEp", eps_in_arc[-1].episode_number),
-                expected_total=expected_total,
-                possibly_incomplete=is_incomplete,
-                episodes=eps_in_arc,
-            )
-            arcs.append(arc)
-            arc_counter += 1
+        present_nums = [num for num in assigned_nums if num in ep_by_num]
+        if not present_nums:
+            continue
+
+        for num in present_nums:
+            matched_ep_nums.add(num)
+
+        # Build episode list including deepcopy/clean nodes & placeholders
+        eps_in_arc: list[EpisodeNode] = []
+        for num in assigned_nums:
+            if num in ep_by_num:
+                src = ep_by_num[num]
+                node = EpisodeNode(
+                    video_id=src.video_id,
+                    episode_number=src.episode_number,
+                    season_number=src.season_number,
+                    series_tag=src.series_tag,
+                    title=src.title,
+                    title_clean=src.title_clean,
+                    thumbnail_url=src.thumbnail_url,
+                    duration_seconds=src.duration_seconds,
+                    view_count=src.view_count,
+                    published_at=src.published_at,
+                    is_placeholder=False,
+                )
+                eps_in_arc.append(node)
+            else:
+                placeholder = EpisodeNode(
+                    video_id=None,
+                    episode_number=num,
+                    season_number=None,
+                    series_tag="placeholder",
+                    title=f"Episode {num} (Unavailable on YouTube)",
+                    title_clean=f"Episode {num} (Unavailable)",
+                    thumbnail_url="",
+                    duration_seconds=0,
+                    view_count=0,
+                    published_at="",
+                    is_placeholder=True,
+                )
+                eps_in_arc.append(placeholder)
+
+        expected_total = st.get("totalEpisodes", len(eps_in_arc))
+        missing_count = len(assigned_nums) - len(present_nums)
+        is_incomplete = missing_count > 0
+
+        st_start = st.get("startEp", assigned_nums[0])
+        st_end = st.get("endEp", assigned_nums[-1])
+        arc = Arc(
+            arc_id=f"arc_{arc_counter:03d}",
+            arc_title=st.get("title", f"Ep {st_start}–{st_end}"),
+            category=st.get("category", "General"),
+            tagline=st.get("tagline", ""),
+            start_episode=st_start,
+            end_episode=st_end,
+            expected_total=expected_total,
+            possibly_incomplete=is_incomplete,
+            episodes=eps_in_arc,
+        )
+        arcs.append(arc)
+        arc_counter += 1
+
+    # Any canonical episode not covered by ground truth goes to fallback
+    for ep in episodes:
+        if ep.episode_number not in matched_ep_nums:
+            fallback_episodes.append(ep)
 
     if verbose:
         print(f"  ✅ Matched {sum(len(a.episodes) for a in arcs)} episodes to {len(arcs)} ground-truth arcs")
@@ -289,13 +335,24 @@ def heuristic_cluster(
 def build_linked_lists(arcs: list[Arc]) -> list[Arc]:
     """
     For each arc, set prev_video_id / next_video_id on every EpisodeNode.
-    First episode: prev = None. Last episode: next = None.
+    Points to the nearest playable (non-placeholder) video before/after!
     """
     for arc in arcs:
         eps = arc.episodes
-        for i, ep in enumerate(eps):
-            ep.prev_video_id = eps[i - 1].video_id if i > 0 else None
-            ep.next_video_id = eps[i + 1].video_id if i < len(eps) - 1 else None
+        # Find nearest preceding playable video within THIS arc
+        last_playable_vid = None
+        for ep in eps:
+            ep.prev_video_id = last_playable_vid
+            if ep.video_id:
+                last_playable_vid = ep.video_id
+
+        # Find nearest succeeding playable video within THIS arc
+        next_playable_vid = None
+        for ep in reversed(eps):
+            ep.next_video_id = next_playable_vid
+            if ep.video_id:
+                next_playable_vid = ep.video_id
+
     return arcs
 
 
@@ -336,15 +393,17 @@ def build_arcs_json(arcs: list[Arc]) -> dict:
                 "thumbnail_url":    ep.thumbnail_url,
                 "duration_seconds": ep.duration_seconds,
                 "view_count":       ep.view_count,
+                "is_placeholder":   ep.is_placeholder,
                 "prev_video_id":    ep.prev_video_id,
                 "next_video_id":    ep.next_video_id,
             }
             arc_dict["episodes"].append(ep_dict)
 
-            video_index[ep.video_id] = {
-                "arc_id":   arc.arc_id,
-                "position": position,
-            }
+            if ep.video_id:
+                video_index[ep.video_id] = {
+                    "arc_id":   arc.arc_id,
+                    "position": position,
+                }
 
         arcs_list.append(arc_dict)
 
@@ -469,16 +528,16 @@ def main():
     print(f"  {'TOTAL':<7} {sum(len(a.episodes) for a in arcs):>8} episodes across {len(arcs)} arcs")
 
     # ── Integrity Check ──
+    # Check that prev/next pointers point to valid playable videos within the arc
     errors = []
     for arc in arcs:
         eps = arc.episodes
+        valid_vids = {e.video_id for e in eps if e.video_id}
         for i, ep in enumerate(eps):
-            expected_prev = eps[i-1].video_id if i > 0 else None
-            expected_next = eps[i+1].video_id if i < len(eps)-1 else None
-            if ep.prev_video_id != expected_prev:
-                errors.append(f"{arc.arc_id} pos {i}: bad prev pointer")
-            if ep.next_video_id != expected_next:
-                errors.append(f"{arc.arc_id} pos {i}: bad next pointer")
+            if ep.prev_video_id and ep.prev_video_id not in valid_vids:
+                errors.append(f"{arc.arc_id} pos {i}: invalid prev pointer {ep.prev_video_id}")
+            if ep.next_video_id and ep.next_video_id not in valid_vids:
+                errors.append(f"{arc.arc_id} pos {i}: invalid next pointer {ep.next_video_id}")
 
     if errors:
         print(f"\n❌ Linked-list integrity errors: {len(errors)}")

@@ -56,6 +56,16 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+.tmkoc-incomplete-tag {
+  background: rgba(255, 170, 0, 0.15);
+  color: #ffaa00;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
 .tmkoc-arc-title {
   font-size: 14px;
   font-weight: 600;
@@ -167,6 +177,27 @@
 .tmkoc-ep-item:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
+}
+
+.tmkoc-ep-item.tmkoc-placeholder {
+  opacity: 0.45;
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+.tmkoc-ep-item.tmkoc-placeholder:hover {
+  background: transparent;
+  color: #ccc;
+}
+
+.tmkoc-status-pill {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #bbb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-style: normal;
+  margin-left: auto;
 }
 
 .tmkoc-ep-item.tmkoc-active {

@@ -92,8 +92,14 @@
     const { position } = videoInfo;
     const episodes = arc.episodes;
     const currentEp = episodes[position];
-    const prevEp = position > 0 ? episodes[position - 1] : null;
-    const nextEp = position < episodes.length - 1 ? episodes[position + 1] : null;
+
+    // Find next and prev playable episodes using linked list pointers
+    const prevEp = currentEp.prev_video_id
+      ? episodes.find((e) => e.video_id === currentEp.prev_video_id)
+      : null;
+    const nextEp = currentEp.next_video_id
+      ? episodes.find((e) => e.video_id === currentEp.next_video_id)
+      : null;
 
     const container = document.createElement("div");
     container.id = "tmkoc-arc-nav";
@@ -106,9 +112,11 @@
     const badgeWrap = document.createElement("div");
     badgeWrap.className = "tmkoc-badge-wrap";
     const categoryTag = arc.category ? `<span class="tmkoc-category-tag">${escapeHtml(arc.category)}</span>` : "";
+    const incompleteTag = arc.possibly_incomplete ? `<span class="tmkoc-incomplete-tag" title="Some episodes not yet uploaded to YouTube">Gaps in Arc</span>` : "";
     badgeWrap.innerHTML = `
       <span class="tmkoc-brand-tag">TMKOC Arc</span>
       ${categoryTag}
+      ${incompleteTag}
       <span class="tmkoc-arc-title">${escapeHtml(arc.arc_title)}</span>
       <span class="tmkoc-ep-progress">Ep ${currentEp.episode_number} (${position + 1}/${episodes.length})</span>
     `;
@@ -161,12 +169,19 @@
     drawer.style.display = isDrawerOpen ? "flex" : "none";
 
     episodes.forEach((ep, idx) => {
-      const epItem = document.createElement("a");
-      epItem.href = `/watch?v=${ep.video_id}`;
-      epItem.className = `tmkoc-ep-item ${idx === position ? "tmkoc-active" : ""}`;
+      const epItem = document.createElement(ep.is_placeholder ? "div" : "a");
+      if (!ep.is_placeholder && ep.video_id) {
+        epItem.href = `/watch?v=${ep.video_id}`;
+      }
+      const activeClass = idx === position ? "tmkoc-active" : "";
+      const placeholderClass = ep.is_placeholder ? "tmkoc-placeholder" : "";
+      epItem.className = `tmkoc-ep-item ${activeClass} ${placeholderClass}`.trim();
+
+      const epLabel = ep.is_placeholder ? `<span class="tmkoc-status-pill">Unavailable</span>` : "";
       epItem.innerHTML = `
         <span class="tmkoc-ep-num">Ep ${ep.episode_number}</span>
         <span class="tmkoc-ep-title">${escapeHtml(ep.title_clean)}</span>
+        ${epLabel}
       `;
       drawer.appendChild(epItem);
     });
