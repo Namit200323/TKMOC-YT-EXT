@@ -105,8 +105,10 @@
 
     const badgeWrap = document.createElement("div");
     badgeWrap.className = "tmkoc-badge-wrap";
+    const categoryTag = arc.category ? `<span class="tmkoc-category-tag">${escapeHtml(arc.category)}</span>` : "";
     badgeWrap.innerHTML = `
       <span class="tmkoc-brand-tag">TMKOC Arc</span>
+      ${categoryTag}
       <span class="tmkoc-arc-title">${escapeHtml(arc.arc_title)}</span>
       <span class="tmkoc-ep-progress">Ep ${currentEp.episode_number} (${position + 1}/${episodes.length})</span>
     `;

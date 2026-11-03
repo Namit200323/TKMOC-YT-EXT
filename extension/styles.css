@@ -46,6 +46,16 @@
   letter-spacing: 0.5px;
 }
 
+.tmkoc-category-tag {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e0e0e0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 .tmkoc-arc-title {
   font-size: 14px;
   font-weight: 600;
